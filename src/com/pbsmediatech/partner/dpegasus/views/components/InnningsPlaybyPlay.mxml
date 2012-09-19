@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%">
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameOnModel;
+			
+			import spark.events.TextOperationEvent;
+			
+			[Bindable]private var model:BBGameOnModel = BBGameOnModel.getInstance();
+			
+			protected function innings_away_errors_changeHandler(event:Event):void
+			{
+				
+				model.selected_innings.errors_away = innings_away_errors.value;
+				dispatchEvent(new Event("EVENT_INNINGS_ERRORS_CHANGED",true));;
+			}
+			
+			protected function innings_home_errors_changeHandler(event:Event):void
+			{
+				model.selected_innings.errors_home = innings_home_errors.value;
+				dispatchEvent(new Event("EVENT_INNINGS_ERRORS_CHANGED",true));
+				
+			}
+			
+			protected function innings_away_hits_changeHandler(event:Event):void
+			{
+				model.selected_innings.hits_away = innings_away_hits.value;
+				dispatchEvent(new Event("EVENT_INNINGS_HITS_CHANGED",true));
+				
+			}
+			
+			protected function innings_home_hits_changeHandler(event:Event):void
+			{
+				
+				model.selected_innings.hits_home = innings_home_hits.value;
+				dispatchEvent(new Event("EVENT_INNINGS_HITS_CHANGED",true));
+			}
+			
+			protected function innings_away_hr_changeHandler(event:Event):void
+			{
+				model.selected_innings.runs_away = innings_away_hr.value
+				dispatchEvent(new Event("EVENT_INNINGS_SCORE_CHANGED",true));
+				
+			}
+			
+			protected function innings_home_hr_changeHandler(event:Event):void
+			{
+				model.selected_innings.runs_home = innings_home_hr.value
+				dispatchEvent(new Event("EVENT_INNINGS_SCORE_CHANGED",true));
+				
+			}
+			
+			protected function innings_pp_h_changeHandler(event:TextOperationEvent):void
+			{
+				model.selected_innings.innings_pp_h = innings_pp_h.text;
+				
+			}
+			
+			protected function innings_pp_a_changeHandler(event:TextOperationEvent):void
+			{
+				model.selected_innings.innings_pp_a = innings_pp_a.text;
+				
+			}
+			
+			protected function summary_changeHandler(event:TextOperationEvent):void
+			{
+				model.selected_innings.summary = summary.text;
+				
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<s:HGroup width="100%" paddingLeft="15">
+		<s:Label  fontWeight="bold" fontSize="16"  text="{model.selected_innings.innings_num+'回'}"/>
+	</s:HGroup>
+	
+	<s:HGroup width="100%">
+	
+
+	
+	<s:VGroup width="100%" height="300">
+		<s:HGroup width="100%" verticalAlign="middle">
+			<s:Label fontWeight="bold"  fontSize="14"  text="表 : "/>
+			<s:Label fontWeight="bold" fontSize="14" text="{model.bbteam_away.bbteam_short_name}"/>
+			<s:Label text="Runs"/>
+			<s:NumericStepper maximum="99" id="innings_away_hr" value="{model.selected_innings.runs_away}" change="innings_away_hr_changeHandler(event)"/>
+			
+			<s:Label text="Hits"/>
+			<s:NumericStepper maximum="99" id="innings_away_hits" value="{model.selected_innings.hits_away}" change="innings_away_hits_changeHandler(event)"/>
+			<s:Label text="Errors"/>
+			<s:NumericStepper  maximum="99" id="innings_away_errors" value="{model.selected_innings.errors_away}" change="innings_away_errors_changeHandler(event)"/>
+		</s:HGroup>
+		<s:TextArea width="100%" height="100%" text="{model.selected_innings.innings_pp_a}" id="innings_pp_a" change="innings_pp_a_changeHandler(event)">
+		</s:TextArea>
+	</s:VGroup>
+		<s:VGroup width="100%" height="300">
+			<s:HGroup width="100%" verticalAlign="middle">
+				<s:Label fontWeight="bold" fontSize="14" text="裏 : "/>
+				<s:Label fontWeight="bold" fontSize="14" text="{model.bbteam_home.bbteam_name_ja}"/>
+				<s:Label text="Runs"/>
+				<s:NumericStepper maximum="99" id="innings_home_hr" value="{model.selected_innings.runs_home}" change="innings_home_hr_changeHandler(event)"/>
+				
+				<s:Label text="Hits"/>
+				<s:NumericStepper maximum="99" id="innings_home_hits" value="{model.selected_innings.hits_home}" change="innings_home_hits_changeHandler(event)"/>
+				<s:Label text="Errors"/>
+				<s:NumericStepper maximum="99" id="innings_home_errors" value="{model.selected_innings.errors_home}" change="innings_home_errors_changeHandler(event)"/>
+			</s:HGroup>
+			<s:TextArea width="100%" height="100%" text="{model.selected_innings.innings_pp_h}" id="innings_pp_h" change="innings_pp_h_changeHandler(event)">
+			</s:TextArea>
+		</s:VGroup>
+	
+	</s:HGroup>
+	<s:Label text="Summary"/>
+	<s:TextArea width="100%" height="100" text="{model.selected_innings.summary}" id="summary" change="summary_changeHandler(event)">
+		
+	</s:TextArea>
+	
+</s:Group>

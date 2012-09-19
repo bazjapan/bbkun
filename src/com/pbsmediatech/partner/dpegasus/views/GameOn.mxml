@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" creationComplete="cc()" xmlns:components="com.pbsmediatech.partner.dpegasus.views.components.*">
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+		
+	<fx:Script>
+		<![CDATA[
+			import app.popMessage;
+			
+			import com.adobe.serialization.json.JSON;
+			import com.pbsmediatech.json.utils.extractResultMessage;
+			import com.pbsmediatech.partner.dpegasus.DomainSettings;
+			import com.pbsmediatech.partner.dpegasus.dto.BBGame;
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGameResultDetails;
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBInnings;
+			import com.pbsmediatech.partner.dpegasus.json.controllers.BBGameController;
+			import com.pbsmediatech.partner.dpegasus.views.components.renderers.ScoreBoardInningsRenderer;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameModel;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameOnModel;
+			import com.pbsmediatech.partner.dpegasus.views.tasks.gameon.addInnings;
+			import com.pbsmediatech.partner.dpegasus.views.tasks.gameon.removeInnings;
+			
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import utils.url.openInBrowser;
+			
+			[Bindable]private var model:BBGameOnModel = BBGameOnModel.getInstance();
+			private var controller:BBGameController = new BBGameController(DomainSettings.API_URL);
+			
+			//--temp
+			[Bindable]public var home_errors:int;
+			[Bindable]public var away_errors:int;
+			[Bindable]public var home_hits:int;
+			[Bindable]public var away_hits:int;
+
+			
+			protected function inningsSponsors_clickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+			}
+
+			protected function gameAdmin_clickHandler(event:MouseEvent):void
+			{
+				Alert.show("保存しますか？","Save Game",Alert.YES|Alert.NO|Alert.CANCEL,null,
+					function(ce:CloseEvent):void{
+						if(ce.detail == Alert.CANCEL){
+							
+						}else{
+						if(ce.detail == Alert.YES)
+						{
+							btn_save_clickHandler();
+						}
+				dispatchEvent(new Event("EVENT_GO_TO_GAME_ADMIN"));
+						}
+					});
+					
+			}
+
+			protected function add_innings_clickHandler(event:MouseEvent):void
+			{
+				model.selected_innings = addInnings();
+			}
+			
+			private function cc():void
+			{
+			//sb_scroller.width = this.width;
+			this.addEventListener("EVENT_INNINGS_SCORE_CHANGED",onEVENT_INNINGS_SCORE_CHANGED);
+			this.addEventListener("EVENT_CURRENT_INNINGS_CHANGED",onEVENT_CURRENT_INNINGS_CHANGED);
+			this.addEventListener("EVENT_INNINGS_HITS_CHANGED", onEVENT_INNINGS_HITS_CHANGED);
+			this.addEventListener("EVENT_INNINGS_ERRORS_CHANGED", onEVENT_INNINGS_ERRORS_CHANGED);
+			
+			onEVENT_INNINGS_ERRORS_CHANGED();
+			onEVENT_INNINGS_HITS_CHANGED();
+			onEVENT_INNINGS_SCORE_CHANGED();
+			
+			}
+
+			private function onEVENT_CURRENT_INNINGS_CHANGED(event:Event):void
+			{
+				var ct:ScoreBoardInningsRenderer = event.target as ScoreBoardInningsRenderer;
+				if(ct == null){return};
+				var innings:BBInnings = ct.innings;
+				model.current_innings = innings;
+				model.selected_innings = model.current_innings;
+			}
+
+			private function onEVENT_INNINGS_SCORE_CHANGED(event:Event = null):void
+			{
+				var hhs:int;
+				var ahs:int;
+				for each (var innings:BBInnings in model.innings)
+				{
+					hhs += innings.runs_home;
+					ahs += innings.runs_away;
+				}
+				model.bbgame_in_play.bbgame_home_score = hhs;
+				model.bbgame_in_play.bbgame_away_score = ahs;
+				
+			}
+			private function onEVENT_INNINGS_HITS_CHANGED(event:Event = null):void
+			{
+				var hhs:int;
+				var ahs:int;
+				for each (var innings:BBInnings in model.innings)
+				{
+					hhs += innings.hits_home
+					ahs += innings.hits_away;
+				}
+				home_hits = hhs;
+				away_hits = ahs;
+				
+			}
+			private function onEVENT_INNINGS_ERRORS_CHANGED(event:Event = null):void
+			{
+				var hhs:int;
+				var ahs:int;
+				for each (var innings:BBInnings in model.innings)
+				{
+					hhs += innings.errors_home;
+					ahs += innings.errors_away;
+				}
+				home_errors = hhs;
+				away_errors = ahs;
+				
+			}
+			
+			
+			
+
+
+			protected function remove_innings_clickHandler(event:MouseEvent):void
+			{
+				removeInnings();
+				onEVENT_INNINGS_SCORE_CHANGED();
+			}
+
+
+			protected function innings_home_hits_changeHandler(event:Event):void
+			{
+				// TODO Auto-generated method stub
+			}
+
+
+			protected function innings_home_errors_changeHandler(event:Event):void
+			{
+				// TODO Auto-generated method stub
+			}
+
+
+			protected function innings_away_hits_changeHandler(event:Event):void
+			{
+				
+			}
+
+
+			protected function innings_away_errors_changeHandler(event:Event):void
+			{
+				
+
+			}
+			public function save():void
+			{
+				btn_save_clickHandler();
+			}
+			
+			[Bindable]
+			public var remainingTimeTillNextSave:int = 0;
+			protected function btn_save_clickHandler(event:MouseEvent = null):void
+			{
+				if(event!=null){dispatchEvent(new Event("GAME_SAVED"))}
+				trace("Trying to save.")
+				try
+				{
+				popMessage("ゲームを保存");
+				var g:BBGame = model.bbgame_in_play;
+				g.bbgame_title = bbgame_title.text;
+				g.bbteam_home = model.bbteam_home.bbteam_name_ja;
+				g.bbteam_away = model.bbteam_away.bbteam_name_ja;
+				g.bbteam_home_short =  model.bbteam_home.bbteam_short_name;
+				g.bbteam_away_short =  model.bbteam_away.bbteam_short_name;
+				g.bbgame_innings = JSON.encode(model.innings.source);
+				
+				game_pitcher_results.update_bbgameResults();
+				model.bbgameResults.battery_a = battery_a.text;
+				model.bbgameResults.battery_h = battery_h.text;
+				model.bbgameResults.hr_h = hr_h.text;
+				model.bbgameResults.hr_a = hr_a.text;
+				model.bbgameResults.threeb_h = threeb_h.text;
+				model.bbgameResults.threeb_a = threeb_a.text;
+				model.bbgameResults.twob_h = twob_h.text;
+				model.bbgameResults.twob_a = twob_a.text;
+				g.bbgame_results = JSON.encode( model.bbgameResults);
+				g.bbgame_lineup_home = JSON.encode(model.bbgame_lineup_home.source);
+				g.bbgame_lineup_away = JSON.encode(model.bbgame_lineup_away.source);
+				g.bbgame_innings = JSON.encode(model.innings.source);
+				g.bbgame_sponsors = JSON.encode(model.bbgame_sponsors.source);
+				g.bbgame_innings_sponsors = JSON.encode(model.innings_sponsors.source);
+				g.bbgame_complete = bbgame_complete.selected?1:0;
+				
+				var meta:Object = new Object;
+				meta.ht_color = model.bbteam_home.bbteam_color;
+				meta.at_color = model.bbteam_away.bbteam_color;
+				g.bbgame_meta = JSON.encode(meta);
+				
+				controller.update_bbgames_by_bbgame_ID(g, function(evt:ResultEvent):void{
+					popMessage(extractResultMessage(evt));
+				});
+				}
+				catch(e:Error)
+				{
+					trace(e)
+				}
+			}
+			protected function view_clickHandler(event:MouseEvent):void
+			{
+				openInBrowser("http://www.d-pegasus.com/game/result.html#"+model.bbgame_in_play.bbgame_ID);
+				
+			}
+			
+			[Bindable]public var auto_save:Boolean;
+			protected function cb_autosave_changeHandler(event:Event):void
+			{
+				auto_save = cb_autosave.selected;
+				dispatchEvent(new Event("AUTO_SAVE_CHANGE", true));
+			}
+
+		]]>
+	</fx:Script>
+
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<s:VGroup width="100%" height="100%">
+	<s:HGroup width="100%" paddingLeft="2" paddingRight="2">
+    		<s:HGroup width="100%" horizontalAlign="left">
+    			<s:Button id="gameAdmin" width="100" label="戻る" click="gameAdmin_clickHandler(event)"/>
+    		</s:HGroup>	
+		<s:HGroup width="100%" horizontalAlign="center">
+			<s:Button id="remove_innings" x="84" width="134" label="イニングを削除"
+					  click="remove_innings_clickHandler(event)"
+					  enabled="{model.innings.length &gt; BBGameModel.getInstance().default_min_innings}"/>
+			<s:Button id="add_innings" x="209" width="130" label="イニングを追加"
+					  click="add_innings_clickHandler(event)"/>
+		</s:HGroup>
+    		<s:HGroup width="100%" horizontalAlign="right">
+				<s:Button id="view" width="182" label="結果ペ－ジ"
+						  click="view_clickHandler(event)" enabled="{model.bbgame_in_play != null}"/>
+				<s:CheckBox id="cb_autosave"  change="cb_autosave_changeHandler(event)" toolTip="自動保存"/> 
+				<s:Button id="btn_save" width="230" label="{'ゲームを保存         '+remainingTimeTillNextSave+'s'}" click="btn_save_clickHandler(event)"/>
+			</s:HGroup>	
+    	</s:HGroup>	
+		
+		<s:BorderContainer width="100%" height="129">
+			
+		
+		<s:HGroup width="100%" height="100%" verticalAlign="middle" paddingBottom="20" paddingLeft="10" paddingRight="10">
+			<!--teams-->
+			<s:VGroup width="165">
+				<s:VGroup width="100%" verticalAlign="middle" height="40">
+					<s:Label fontSize="14" fontWeight="normal" text="Teams"/>
+				</s:VGroup>
+				<s:VGroup width="100%" verticalAlign="middle"  height="40">
+					<s:Label id="bbteam_away" width="100%" fontSize="13" fontWeight="bold"
+							 text="{model.bbteam_away.bbteam_name_ja}">
+						
+					</s:Label>
+				</s:VGroup>
+				<s:VGroup width="100%" verticalAlign="middle" height="40">
+					<s:Label id="bbteam_home" width="100%" fontSize="13" fontWeight="bold"
+							 text="{model.bbteam_home.bbteam_name_ja}">
+						
+					</s:Label>
+				</s:VGroup>
+			</s:VGroup>
+			<!--//teams-->
+			<s:HGroup width="100%" height="100%">
+				<s:Scroller id="sb_scroller">
+				<s:DataGroup dataProvider="{model.innings}" width="100%" height="100%" itemRenderer="com.pbsmediatech.partner.dpegasus.views.components.renderers.ScoreBoardInningsRenderer">
+					<s:layout>
+						<s:HorizontalLayout/>
+					</s:layout>
+				</s:DataGroup>
+				</s:Scroller>
+			</s:HGroup>
+			<s:HGroup id="hg_scores"  height="100%">
+				<s:VGroup>
+					<s:VGroup verticalAlign="middle" height="40" width="30">
+						<s:Label text="計"/>
+					</s:VGroup>
+					<s:VGroup verticalAlign="middle"  horizontalAlign="center"  height="40" width="30">
+						<s:Label id="ti_away_score" width="100%" text="{model.bbgame_in_play.bbgame_away_score}">
+							
+						</s:Label>
+					</s:VGroup>
+					<s:VGroup verticalAlign="middle" horizontalAlign="center" height="40" width="30">
+						<s:Label id="ti_home_score" width="100%" text="{model.bbgame_in_play.bbgame_home_score}">
+							
+						</s:Label>
+					</s:VGroup>
+				</s:VGroup>
+				<!--score end-->
+				<s:VGroup>
+					<s:VGroup verticalAlign="middle" horizontalAlign="center" height="40" width="40">
+						<s:Label text="H"/>
+					</s:VGroup>
+					<s:VGroup verticalAlign="middle"  horizontalAlign="center"  height="40" width="40">
+						<s:NumericStepper maximum="99" width="40" value="{away_hits}"/>
+					</s:VGroup>
+					<s:VGroup verticalAlign="middle" horizontalAlign="center" height="40" width="40">
+						<s:NumericStepper maximum="99" width="40" value="{home_hits}"/>
+					</s:VGroup>
+				</s:VGroup>
+				<!--hits end-->
+				<s:VGroup>
+					<s:VGroup verticalAlign="middle" horizontalAlign="center" height="40" width="40">
+						<s:Label text="E"/>
+					</s:VGroup>
+					<s:VGroup verticalAlign="middle"  horizontalAlign="center"  height="40" width="40">
+						<s:NumericStepper maximum="99" width="40" value="{away_errors}"/>
+					</s:VGroup>
+					<s:VGroup verticalAlign="middle" horizontalAlign="center" height="40" width="40">
+						<s:NumericStepper maximum="99" width="40" value="{home_errors}"/>
+					</s:VGroup>
+				</s:VGroup>
+				<!--errors end-->
+				
+			</s:HGroup>
+			
+		</s:HGroup>	
+		</s:BorderContainer>
+		<mx:HRule width="100%" />
+		<s:HGroup width="100%">
+			<s:TabBar dataProvider="{vs1}"/>
+		</s:HGroup>
+		<mx:ViewStack id="vs1" width="100%" height="100%">
+
+			<s:NavigatorContent label="ゲームの詳細" width="100%" height="100%">
+				<s:HGroup width="100%" height="100%" horizontalAlign="center">
+					<s:VGroup width="100%" height="100%" horizontalAlign="center">
+						<components:MatchDayTeamEditor players="{model.bbgame_lineup_home}" bbteam="{model.bbteam_home}" id="bbgame_lineup_home" height="500">
+							
+						</components:MatchDayTeamEditor>
+					</s:VGroup>
+					<s:VGroup id="vg_results"  width="500" height="518"
+							  horizontalAlign="center">
+						<s:TextInput text="{model.bbgame_in_play.bbgame_title}" id="bbgame_title" fontSize="14" fontWeight="normal" maxChars="100" width="100%"/>
+						<components:GamePitcherResults id="game_pitcher_results"/>
+						<s:HGroup width="100%">
+							<s:Label text="ゲームは完了" width="150"/>
+							<s:CheckBox id="bbgame_complete" selected="{model.bbgame_in_play.bbgame_complete == 1}"/>
+						</s:HGroup>
+						<!--Battery-->
+						<s:HGroup width="100%" verticalAlign="bottom" paddingTop="20">
+							<s:Label text="バッテリー" fontWeight="bold"/>
+							<mx:HRule width="100%"/>
+						</s:HGroup>
+						<s:VGroup width="100%">
+							<s:HGroup width="100%">
+								<s:Label text="{model.bbteam_away.bbteam_short_name}" width="60"/>
+								<mx:VRule height="25"/>
+								<s:TextArea id="battery_a"  text="{model.bbgameResults.battery_a}"  width="100%" height="40"/>
+							</s:HGroup>
+							<s:HGroup width="100%">
+								<s:Label text="{model.bbteam_home.bbteam_short_name}" width="60"/>
+								<mx:VRule height="25"/>
+								<s:TextArea id="battery_h" text="{model.bbgameResults.battery_h}" width="100%" height="40"/>
+							</s:HGroup>
+						</s:VGroup>
+						
+						
+						<!--Homeruns-->
+						<s:HGroup width="100%" verticalAlign="bottom">
+							<s:Label text="本塁打"  fontWeight="bold"/>
+							<mx:HRule width="100%"/>
+						</s:HGroup>
+						<s:VGroup width="100%">
+							<s:HGroup width="100%">
+								<s:Label text="{model.bbteam_away.bbteam_short_name}" width="60"/>
+								<mx:VRule height="25"/>
+								<s:TextArea text="{model.bbgameResults.hr_a}" id="hr_a" width="100%" height="40"/>
+							</s:HGroup>
+							<s:HGroup width="100%">
+								<s:Label text="{model.bbteam_home.bbteam_short_name}" width="60"/>
+								<mx:VRule height="25"/>
+								<s:TextArea text="{model.bbgameResults.hr_h}" id="hr_h" width="100%" height="40"/>
+							</s:HGroup>
+							
+						</s:VGroup>
+						
+						<!--三塁打-->
+						<s:HGroup width="100%" verticalAlign="bottom">
+							<s:Label text="三塁打"  fontWeight="bold"/>
+							<mx:HRule width="100%"/>
+						</s:HGroup>
+						<s:VGroup width="100%">
+							<s:HGroup width="100%">
+								<s:Label text="{model.bbteam_away.bbteam_short_name}" width="60"/>
+								<mx:VRule height="25"/>
+								<s:TextArea  text="{model.bbgameResults.threeb_a}" id="threeb_a"  width="100%" height="40"/>
+							</s:HGroup>
+							<s:HGroup width="100%">
+								<s:Label text="{model.bbteam_home.bbteam_short_name}" width="60"/>
+								<mx:VRule height="25"/>
+								<s:TextArea text="{model.bbgameResults.threeb_h}" id="threeb_h" width="100%" height="40"/>
+							</s:HGroup>
+							
+						</s:VGroup>
+						
+						<!--二塁打-->
+						<s:HGroup width="100%" verticalAlign="bottom">
+							<s:Label text="二塁打"  fontWeight="bold"/>
+							<mx:HRule width="100%"/>
+						</s:HGroup>
+						<s:VGroup width="100%">
+							<s:HGroup width="100%">
+								<s:Label text="{model.bbteam_away.bbteam_short_name}" width="60"/>
+								<mx:VRule height="25"/>
+								<s:TextArea  text="{model.bbgameResults.twob_a}" id="twob_a"  width="100%" height="40"/>
+							</s:HGroup>
+							<s:HGroup width="100%">
+								<s:Label text="{model.bbteam_home.bbteam_short_name}" width="60"/>
+								<mx:VRule height="25"/>
+								<s:TextArea  text="{model.bbgameResults.twob_h}" id="twob_h"  width="100%" height="40"/>
+							</s:HGroup>
+							
+						</s:VGroup>
+					</s:VGroup>
+					<s:VGroup width="100%" height="100%" horizontalAlign="center">
+						<components:MatchDayTeamEditor players="{model.bbgame_lineup_away}" bbteam="{model.bbteam_away}" id="bbgame_lineup_away" height="500">
+							
+						</components:MatchDayTeamEditor>
+					</s:VGroup>
+				</s:HGroup>
+			</s:NavigatorContent>
+			<s:NavigatorContent width="100%" height="100%" label="イニングの詳細">
+				<components:InnningsPlaybyPlay id="bbgame_innings" width="100%" height="100%">
+					
+				</components:InnningsPlaybyPlay>
+			</s:NavigatorContent>
+			<s:NavigatorContent label="スポンサー" width="100%" height="100%">
+				<s:HGroup width="100%" height="100%">
+				<components:GameSponsors id="bbgame_sponsors" width="100%" height="100%" title="{'Game Sponsors'}" sponsors="{model.bbgame_sponsors}">
+					
+				</components:GameSponsors>
+				<s:HGroup width="20"/>
+				<components:GameSponsors isInningSponsor="true" id="bbgame_innings_sponsors" width="100%" height="100%" title="{'Innings Sponsors'}" sponsors="{model.innings_sponsors}">
+					
+				</components:GameSponsors>
+				</s:HGroup>
+			</s:NavigatorContent>
+		</mx:ViewStack>
+	
+	</s:VGroup>
+</s:Group>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="418" height="190">
+	<s:layout>
+		<s:VerticalLayout verticalAlign="middle" horizontalAlign="center"/>
+	</s:layout>
+	
+	
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGameSponsor;
+			
+			import mx.collections.ArrayCollection;
+			[Bindable]public var isInningSponsor:Boolean;
+			
+			public var okFunc:Function
+			
+			
+			protected function ok_clickHandler(event:MouseEvent):void
+			{
+				var inning_sponsors:BBGameSponsor = new BBGameSponsor;
+				inning_sponsors.sponsor_name = spon_name.text;
+				inning_sponsors.sponsor_image_url = imageURL.text;
+				inning_sponsors.sponsor_link = url.text;
+				if(isInningSponsor)
+				{
+					inning_sponsors.order = ns_order.value;
+				}
+				okFunc(inning_sponsors);
+			}
+			
+		]]>
+	</fx:Script>
+	<s:HGroup includeInLayout="{isInningSponsor}">
+	<s:Label includeInLayout="{isInningSponsor}" width="160" height="19" text="Innings Number" verticalAlign="bottom"/>
+	<s:NumericStepper maximum="99" includeInLayout="{isInningSponsor}" id="ns_order" value="1"/>
+	</s:HGroup>
+	<s:HGroup width="100%">
+		<s:Label width="80" text="Name"/>
+		<s:TextInput width="100%" id="spon_name"/>
+	</s:HGroup>
+	<s:HGroup width="100%">
+		<s:Label width="80" text="Image URL"/>
+		<s:TextInput width="100%" id="imageURL"/>
+	</s:HGroup>
+	<s:HGroup width="100%">
+		<s:Label width="80" text="URL"/>
+		<s:TextInput width="100%" id="url"/>
+	</s:HGroup>
+	<s:HGroup horizontalAlign="right" width="100%">
+		<s:Button label="OK" id="ok" click="ok_clickHandler(event)"/>
+	</s:HGroup>
+</s:TitleWindow>

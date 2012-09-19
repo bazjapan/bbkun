@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:s="library://ns.adobe.com/flex/spark"
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 width="100%" height="30">
+	<fx:Script>
+		<![CDATA[
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGameResultDetails;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameModel;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameOnModel;
+			
+			import mx.events.FlexEvent;
+			
+			//icons
+			[Bindable]private var WINNING_PITCHER:String = "http://www.pbsmediatech.com/cms/partner/d-pegasus/wp-content/uploads/apps/assets/game_win.gif";
+			[Bindable]private var SAVING_PITCHER:String = "http://www.pbsmediatech.com/cms/partner/d-pegasus/wp-content/uploads/apps/assets/game_s.gif";
+			[Bindable]private var LOSING_PITCHER:String = "http://www.pbsmediatech.com/cms/partner/d-pegasus/wp-content/uploads/apps/assets/game_lose.gif";
+
+			
+			[Bindable]private var model:BBGameOnModel = BBGameOnModel.getInstance();
+			public function update_bbgameResults():BBGameResultDetails
+			{
+				
+				model.bbgameResults.winning_pitcher_info = winning_pitcher_info.text;
+					model.bbgameResults.saving_pitcher_info = saving_pitcher_info.text;
+					model.bbgameResults.losing_pitcher_info = losing_pitcher_info.text;
+					if(!hasSavingPitcher.selected){model.bbgameResults.saving_pitcher_info = ''};
+					return model.bbgameResults;
+			}
+				
+			
+			
+			
+
+			
+
+			
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	
+	<s:HGroup  width="100%" verticalAlign="middle" horizontalAlign="center">
+		<s:HGroup toolTip="勝ち投手" height="30" verticalAlign="middle" paddingRight="10">
+			<s:Image source="{WINNING_PITCHER}"/>
+			<s:VGroup>
+				<s:TextInput width="95" id="winning_pitcher_info" text="{model.bbgameResults.winning_pitcher_info}"/>
+			</s:VGroup>
+		</s:HGroup>
+		<s:HGroup height="30" verticalAlign="middle" paddingRight="10">
+		<s:CheckBox toolTip="抑え投手" id="hasSavingPitcher"  selected="{model.bbgameResults.saving_pitcher_info.length &gt; 0}"/>
+			<s:Image visible="{hasSavingPitcher.selected}"  includeInLayout="{hasSavingPitcher.selected}" source="{SAVING_PITCHER}"/>
+			<s:VGroup visible="{hasSavingPitcher.selected}"  includeInLayout="{hasSavingPitcher.selected}">
+				<s:TextInput  width="95" visible="{hasSavingPitcher.selected}"  includeInLayout="{hasSavingPitcher.selected}" id="saving_pitcher_info" text="{model.bbgameResults.saving_pitcher_info}"/>
+			</s:VGroup>
+		</s:HGroup>
+		<s:HGroup toolTip="負け投手" height="30" verticalAlign="middle" paddingRight="10">
+			<s:Image source="{LOSING_PITCHER}"/>
+			<s:VGroup>
+				<s:TextInput width="95" id="losing_pitcher_info" text="{model.bbgameResults.losing_pitcher_info}"/>
+			</s:VGroup>
+		</s:HGroup>
+	</s:HGroup>
+	
+</s:Group>

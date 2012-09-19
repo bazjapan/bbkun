@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" creationComplete="cc()">
+	<s:layout>
+		<s:VerticalLayout verticalAlign="middle" horizontalAlign="center" />
+	</s:layout>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import app.popMessage;
+			import com.pbsmediatech.json.utils.extractResult;
+			import com.pbsmediatech.json.utils.extractResultMessage;
+			import com.pbsmediatech.json.utils.extractResultResult;
+			import com.pbsmediatech.partner.dpegasus.DomainSettings;
+			import com.pbsmediatech.partner.dpegasus.dto.BBStadium;
+			import com.pbsmediatech.partner.dpegasus.json.controllers.BBStadiumController;
+			import com.pbsmediatech.partner.dpegasus.json.utils.BBStadiumResultHelper;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBStadiumModel;
+			
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			[Bindable]private var show_get:Boolean = false;
+			[Bindable]public var model:BBStadiumModel = BBStadiumModel.getInstance();
+			private var bbstadiumController:BBStadiumController = new BBStadiumController(DomainSettings.API_URL);
+			private var helper:BBStadiumResultHelper = new BBStadiumResultHelper();
+			
+			private function cc():void
+			{
+				get_stadiums_clickHandler();
+				this.addEventListener(KeyboardEvent.KEY_DOWN,onKeyDown);
+			}
+
+			private function onKeyDown(event:KeyboardEvent):void
+			{
+				if(event.ctrlKey && event.shiftKey && event.keyCode == 83)
+				{
+					save_clickHandler();
+				}
+				if(event.ctrlKey && event.shiftKey && event.keyCode == 78)
+				{
+					add_stadium_clickHandler();
+				}
+			}
+			protected function get_stadiums_clickHandler(event:MouseEvent = null):void
+			{
+				bbstadiumController.get_all_bbstadiums(function(evt:ResultEvent):void
+				{
+					var results:Array = helper.resultToArray(extractResult(evt));
+					model.bbstadiums.source = results;
+				});
+			}
+			protected function stadiums_changeHandler(event:ListEvent):void
+			{
+				model.selected_bbstadium = stadiums.selectedItem as BBStadium;
+			}
+			protected function save_clickHandler(event:MouseEvent = null):void
+			{
+				if(model.selected_bbstadium == null){return};
+				model.selected_bbstadium.bbstadium_access = bbstadium_access.text;
+				model.selected_bbstadium.bbstadium_add = bbstadium_add.text;
+				model.selected_bbstadium.bbstadium_cap = bbstadium_cap.value;
+				model.selected_bbstadium.bbstadium_lat = Number(bbstadium_lat.text);
+				model.selected_bbstadium.bbstadium_lon = Number(bbstadium_lon.text);
+				model.selected_bbstadium.bbstadium_name = bbstadium_name.text;
+				model.selected_bbstadium.bbstadium_parking = bbstadium_parking.value;
+				model.selected_bbstadium.bbstadium_url = bbstadium_url.text;
+				
+				if(isNaN(model.selected_bbstadium.bbstadium_ID))
+				{
+					//this.enabled = false;
+					popMessage("Adding Stadium.");
+					bbstadiumController.add_bbstadium(model.selected_bbstadium,function(evt:ResultEvent):void
+					{
+						this.enabled = true;
+						if(helper.resultIsGood(extractResult(evt)))
+						{
+							model.selected_bbstadium.bbstadium_ID = extractResultResult(evt) as Number;
+							model.bbstadiums.addItem(model.selected_bbstadium);
+						}
+						else
+						{
+							
+						}
+						popMessage(extractResultMessage(evt),500);
+					});
+				}
+				else
+				{
+					//this.enabled = false;
+					popMessage("Updating Stadium.");
+					bbstadiumController.update_bbstadiums_by_bbstadium_ID(model.selected_bbstadium,function(evt:ResultEvent):void
+					{
+						this.enabled = true;
+						if(helper.resultIsGood(extractResult(evt)))
+						{
+							
+							
+						}
+						else
+						{
+							
+						}
+						popMessage(extractResultMessage(evt),500);
+					});
+				}
+			}
+			
+			protected function add_stadium_clickHandler(event:MouseEvent = null):void
+			{
+				model.selected_bbstadium = new BBStadium();
+				model.selected_bbstadium.bbstadium_lat = 0;
+				model.selected_bbstadium.bbstadium_lon = 0;
+			}
+			
+			
+			protected function remove_stadium_clickHandler(event:MouseEvent):void
+			{
+				if(model.selected_bbstadium == null){return};
+				if(isNaN(model.selected_bbstadium.bbstadium_ID)){model.selected_bbstadium = null};
+				Alert.show("Are you sure you wish to remove this item?", "Remove Item?", Alert.YES|Alert.NO, null, 
+					function(ce:CloseEvent):void{
+						if(ce.detail == Alert.YES)
+						{
+						popMessage("Removing Stadium");
+						bbstadiumController.remove_bbstadiums_by_bbstadium_ID(model.selected_bbstadium, function(evt:ResultEvent):void
+						{
+							
+								popMessage(extractResultMessage(evt));
+								if(helper.resultIsGood(extractResult(evt)))
+								{
+									model.bbstadiums.removeItemAt(model.bbstadiums.getItemIndex(model.selected_bbstadium));
+									model.selected_bbstadium = null;	
+								}
+							
+						});
+						}
+					});
+			}
+			
+		]]>
+	</fx:Script>
+	
+
+	
+	<mx:VDividedBox width="100%" height="100%">
+		<mx:DataGrid dataProvider="{model.bbstadiums}" width="100%" height="100%" id="stadiums" change="stadiums_changeHandler(event)">
+			<mx:columns>
+				<mx:DataGridColumn dataField="bbstadium_ID"/>
+				<mx:DataGridColumn dataField="bbstadium_name"/>
+				<mx:DataGridColumn dataField="bbstadium_add"/>
+				<mx:DataGridColumn dataField="bbstadium_lat"/>
+				<mx:DataGridColumn dataField="bbstadium_lon"/>
+				<mx:DataGridColumn dataField="bbstadium_url"/>
+				<mx:DataGridColumn dataField="bbstadium_access"/>
+				<mx:DataGridColumn dataField="bbstadium_cap"/>
+				<mx:DataGridColumn dataField="bbstadium_parking"/>
+			</mx:columns>
+		</mx:DataGrid> 
+		<s:VGroup paddingLeft="20" paddingRight="20" width="100%" height="100%"  >
+			<s:HGroup width="100%"  paddingBottom="20">
+				<s:HGroup width="100%" horizontalAlign="left">
+					<s:Button enabled="{model.selected_bbstadium != null}" label="Remove" id="remove_stadium" click="remove_stadium_clickHandler(event)"/>
+					<s:Button includeInLayout="{show_get}" visible="{show_get}" label="Get" id="get_stadiums" click="get_stadiums_clickHandler(event)"/>
+					<s:Button label="Add" id="add_stadium" click="add_stadium_clickHandler(event)"/>
+				</s:HGroup>	
+				<s:HGroup  width="100%" horizontalAlign="right">
+					<s:Button enabled="{model.selected_bbstadium != null}" label="Save" id="save" click="save_clickHandler(event)"/>
+				</s:HGroup>	
+			</s:HGroup>	
+			<s:HGroup enabled="{model.selected_bbstadium != null}" width="100%">
+				<s:VGroup width="33%">
+					<s:HGroup width="100%">
+						<s:Label  text="ID" width="80"/>
+						<s:Label id="bbstadium_ID" text="{isNaN(model.selected_bbstadium.bbstadium_ID)?'New':model.selected_bbstadium.bbstadium_ID}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="name" width="80"/>
+						<s:TextInput id="bbstadium_name" width="200" text="{model.selected_bbstadium.bbstadium_name}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="Home Page" width="80"/>
+						<s:TextInput id="bbstadium_url" width="200" text="{model.selected_bbstadium.bbstadium_url}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="Capacity" width="80"/>
+						<s:NumericStepper  id="bbstadium_cap" maximum="500000" width="120" value="{model.selected_bbstadium.bbstadium_cap}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="Parking" width="80"/>
+						<s:NumericStepper  id="bbstadium_parking" maximum="1000000" width="120" value="{model.selected_bbstadium.bbstadium_parking}"/>
+					</s:HGroup>
+				</s:VGroup>
+				<s:VGroup width="100%">
+					<s:HGroup width="100%">
+						<s:Label  text="Address" width="80"/>
+						<s:TextArea id="bbstadium_add" text="{model.selected_bbstadium.bbstadium_add}"/>
+						<s:Label text="Access" width="80"/>
+						<s:TextArea id="bbstadium_access" maxChars="300" text="{model.selected_bbstadium.bbstadium_access}"/>
+					</s:HGroup>
+					
+					<s:HGroup width="100%">
+						<s:Label text="Lat/lng" width="80"/>
+						<s:TextInput id="bbstadium_lat" text="{model.selected_bbstadium.bbstadium_lat}"/>
+						<s:TextInput id="bbstadium_lon" text="{model.selected_bbstadium.bbstadium_lon}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+					</s:HGroup>
+				</s:VGroup>
+			</s:HGroup>
+			
+		</s:VGroup>
+	</mx:VDividedBox>
+	
+	
+	
+</s:Group>

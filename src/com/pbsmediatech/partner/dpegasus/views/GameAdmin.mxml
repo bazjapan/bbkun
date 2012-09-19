@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" creationComplete="cc()" xmlns:components="com.pbsmediatech.partner.dpegasus.views.components.*" xmlns:georg="com.georg.*">
+	<s:layout>
+		<s:VerticalLayout verticalAlign="middle" horizontalAlign="center" />
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import app.popMessage;
+			
+			import com.adobe.serialization.json.JSON;
+			import com.pbsmediatech.json.utils.extractResult;
+			import com.pbsmediatech.json.utils.extractResultMessage;
+			import com.pbsmediatech.json.utils.extractResultResult;
+			import com.pbsmediatech.partner.dpegasus.DomainSettings;
+			import com.pbsmediatech.partner.dpegasus.dto.BBGame;
+			import com.pbsmediatech.partner.dpegasus.dto.BBStadium;
+			import com.pbsmediatech.partner.dpegasus.dto.BBTeam;
+			import com.pbsmediatech.partner.dpegasus.json.controllers.BBGameController;
+			import com.pbsmediatech.partner.dpegasus.json.utils.BBGameResultHelper;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameModel;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBStadiumModel;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBTeamModel;
+			import com.pbsmediatech.partner.dpegasus.views.tasks.getBBStadiumFromModelByID;
+			import com.pbsmediatech.partner.dpegasus.views.tasks.getBBTeamFromModelByID;
+			import com.pbsmediatech.partner.dpegasus.views.tasks.getDefaultBBGame;
+			
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import utils.timestamp.dateToTimestamp;
+			import utils.timestamp.timestampToDate;
+			import utils.url.openInBrowser;
+			
+			[Bindable]private var show_get:Boolean = true;
+			[Bindable]public var model:BBGameModel = BBGameModel.getInstance();
+			private var bbgameController:BBGameController = new BBGameController(DomainSettings.API_URL);
+			private var helper:BBGameResultHelper = new BBGameResultHelper();
+			
+			private function cc():void
+			{
+				//get_bbgames_clickHandler();
+				this.addEventListener(KeyboardEvent.KEY_DOWN,onKeyDown);
+			}
+			
+			private function onKeyDown(event:KeyboardEvent):void
+			{
+				if(event.ctrlKey && event.shiftKey && event.keyCode == 83)
+				{
+					save_clickHandler();
+				}
+				if(event.ctrlKey && event.shiftKey && event.keyCode == 78)
+				{
+					add_bbgame_clickHandler();
+				}
+			}
+			protected function get_bbgames_clickHandler(event:MouseEvent = null):void
+			{
+				popMessage("ゲームロード中",3000);
+				bbgameController.get_all_bbgames(function(evt:ResultEvent):void
+				{
+					popMessage("ゲームロード完了",1000);
+					var results:Array = helper.resultToArray(extractResult(evt));
+					model.bbgames.source = results;
+				});
+			}
+			protected function dg_bbgames_changeHandler(event:ListEvent):void
+			{
+				model.selected_bbgame = dg_bbgames.selectedItem as BBGame;
+			}
+			protected function save_clickHandler(event:MouseEvent = null):void
+			{
+				//fill params from form here
+				if(model.selected_bbgame == null){return};
+				if(bbteam_ID_home.selectedItem == null || bbteam_ID_away.selectedItem == null)
+				{
+					Alert.show("チームを選んでください");
+					return;
+				}
+				model.selected_bbgame.bbgame_complete = bbgame_complete.selected?1:0;
+				model.selected_bbgame.bbgame_start_date = bbgame_start_date.selectedDate==null?'':dateToTimestamp(bbgame_start_date.selectedDate);
+				model.selected_bbgame.bbstadium_ID = bbstadium_ID.selectedStadiumID;
+				model.selected_bbgame.bbteam_ID_away = bbteam_ID_away.selectedTeamID;
+				model.selected_bbgame.bbteam_ID_home = bbteam_ID_home.selectedTeamID;
+				
+				model.selected_bbgame.bbteam_home = BBTeam(bbteam_ID_home.selectedItem).bbteam_name_ja;
+				model.selected_bbgame.bbteam_away =  BBTeam(bbteam_ID_away.selectedItem).bbteam_name_ja;
+				model.selected_bbgame.bbteam_home_short =  BBTeam(bbteam_ID_home.selectedItem).bbteam_short_name;
+				model.selected_bbgame.bbteam_away_short = BBTeam(bbteam_ID_away.selectedItem).bbteam_short_name;
+				
+				var meta:Object = new Object;
+				meta.ht_color = BBTeam(bbteam_ID_home.selectedItem).bbteam_color;
+				meta.at_color =  BBTeam(bbteam_ID_away.selectedItem).bbteam_color;
+				model.selected_bbgame.bbgame_meta = JSON.encode(meta);
+				
+				
+				
+				if(isNaN(model.selected_bbgame.bbgame_ID))
+				{
+					popMessage("ゲームを追加");
+					bbgameController.add_bbgame(model.selected_bbgame,function(evt:ResultEvent):void
+					{
+						if(helper.resultIsGood(extractResult(evt)))
+						{
+							model.selected_bbgame.bbgame_ID = extractResultResult(evt) as Number;
+							model.bbgames.addItem(model.selected_bbgame);
+						}
+						else
+						{
+						}
+						popMessage(extractResultMessage(evt),500);
+					});
+				}
+				else
+				{
+					popMessage("ゲームを保存");
+				bbgameController.update_bbgames_by_bbgame_ID(model.selected_bbgame,function(evt:ResultEvent):void
+				{
+					if(helper.resultIsGood(extractResult(evt)))
+					{
+					}
+					else
+					{
+					}
+					popMessage(extractResultMessage(evt),500);
+				});
+				}
+			}
+			
+			protected function add_bbgame_clickHandler(event:MouseEvent = null):void
+			{
+				model.selected_bbgame = getDefaultBBGame();
+			}
+			protected function remove_bbgame_clickHandler(event:MouseEvent):void
+			{
+				if(model.selected_bbgame == null){return};
+				if(isNaN(model.selected_bbgame.bbgame_ID)){model.selected_bbgame = null};
+				Alert.show("Are you sure you wish to remove this item?", "Remove Item?", Alert.YES|Alert.NO, null, 
+					function(ce:CloseEvent):void{
+						if(ce.detail == Alert.YES)
+						{
+							popMessage("Removing bbgame");
+							bbgameController.remove_bbgames_by_bbgame_ID(model.selected_bbgame, function(evt:ResultEvent):void
+							{
+								popMessage(extractResultMessage(evt));
+								if(helper.resultIsGood(extractResult(evt)))
+								{
+									model.bbgames.removeItemAt(model.bbgames.getItemIndex(model.selected_bbgame));
+									model.selected_bbgame = null;
+								}
+							});
+						}
+					});
+			}
+
+			protected function gameon_clickHandler(event:MouseEvent):void
+			{
+				dispatchEvent(new Event("EVENT_GO_TO_GAME_ON"));
+			}
+
+			protected function view_clickHandler(event:MouseEvent):void
+			{
+				openInBrowser("http://www.d-pegasus.com/game/result.html#"+model.selected_bbgame.bbgame_ID);
+				
+			}
+			private function getStadiumName(item:BBGame,column:DataGridColumn):String
+			{
+				for each(var stadium:BBStadium in bbstadium_ID.stadiums)
+				{
+					if(item.bbstadium_ID == stadium.bbstadium_ID)
+					{
+						return stadium.bbstadium_name;
+					}
+				}
+				return item.bbstadium_ID.toString();
+			}
+			private function getHomeTeamName(item:BBGame,column:DataGridColumn):String
+			{
+				for each(var team:BBTeam in bbteam_ID_home.teams)
+				{
+					if(item.bbteam_ID_home == team.bbteam_ID)
+					{
+						return team.bbteam_name_ja;
+					}
+				}
+				return item.bbteam_ID_home.toString();
+			}
+
+			private function getAwayTeamName(item:BBGame,column:DataGridColumn):String
+			{
+				for each(var team:BBTeam in bbteam_ID_away.teams)
+				{
+					if(item.bbteam_ID_away == team.bbteam_ID)
+					{
+						return team.bbteam_name_ja;
+					}
+				}
+				return item.bbteam_ID_away.toString();
+			}
+			
+		]]>
+	</fx:Script>
+	<mx:VDividedBox width="100%" height="100%">
+		<s:VGroup width="100%" height="100%">
+			
+		<s:HGroup width="100%">
+			<s:HGroup width="100%" horizontalAlign="left">
+				<s:Button id="gameon" width="233" label="ゲーム情報と結果の入力へ"
+						  click="gameon_clickHandler(event)"
+						  enabled="{model.selected_bbgame != null}"/>
+				
+			</s:HGroup>	
+			<s:HGroup width="100%" horizontalAlign="center">
+				
+				<s:Button id="get_bbgames" visible="{show_get}" x="103" width="206"
+						  label="ロードゲーム" click="get_bbgames_clickHandler(event)"
+						  includeInLayout="{show_get}"/>
+				<s:Button id="view" x="234" width="182" label="結果ペ－ジ"
+						  click="view_clickHandler(event)" enabled="{model.selected_bbgame != null}"/>
+			</s:HGroup>
+				<s:HGroup width="100%"  horizontalAlign="center" verticalAlign="middle">
+					<s:Label text="{model.version}"/>
+			<s:HGroup  width="100%" horizontalAlign="right">
+				<s:Button id="save" x="184" width="230" label="ゲームを保存"
+						  click="save_clickHandler(event)" enabled="{model.selected_bbgame != null}"/>
+				</s:HGroup>
+			</s:HGroup>	
+		</s:HGroup>
+		<mx:DataGrid dataProvider="{model.bbgames}" width="100%" height="100%" id="dg_bbgames" change="dg_bbgames_changeHandler(event)">
+			<mx:columns>
+				<mx:DataGridColumn headerText="ID" dataField="bbgame_ID" width="40"/>
+				<mx:DataGridColumn width="130" headerText="ゲームの開始日と時間" dataField="bbgame_start_date">
+					<mx:itemRenderer> <fx:Component> <mx:Label opaqueBackground="{data.bbgame_complete > 0 ? '0xFFFFFF' : '0xA2FEA2'}" /> </fx:Component> </mx:itemRenderer>
+				</mx:DataGridColumn>
+				<mx:DataGridColumn headerText="タイトル"  dataField="bbgame_title" />
+				<mx:DataGridColumn headerText="スタジアム" width="200" dataField="bbstadium_ID" labelFunction="getStadiumName"/>
+				<mx:DataGridColumn headerText="ホームチーム" width="150" dataField="bbteam_ID_home" labelFunction="getHomeTeamName"/>
+				<mx:DataGridColumn headerText="得点" dataField="bbgame_home_score" width="40"/>
+				<mx:DataGridColumn headerText="アウェイチーム" width="150" dataField="bbteam_ID_away" labelFunction="getAwayTeamName"/>
+				<mx:DataGridColumn headerText="得点" dataField="bbgame_away_score"  width="40"/>
+
+			</mx:columns>
+		</mx:DataGrid> 
+		</s:VGroup>
+		<s:VGroup width="100%">
+			
+		<s:HGroup width="100%" >
+			<s:HGroup width="100%"  horizontalAlign="left">
+				<s:Button enabled="{model.selected_bbgame != null}" label="ゲ-ムを削除" id="remove_bbgame" click="remove_bbgame_clickHandler(event)"/>
+			</s:HGroup>
+			<s:HGroup width="100%"  horizontalAlign="right">
+				<s:Button label="ゲームを追加" id="add_bbgame" click="add_bbgame_clickHandler(event)"/>
+			</s:HGroup>
+		</s:HGroup>
+		<s:VGroup paddingLeft="20" paddingRight="20" width="100%" height="100%" >
+			<s:HGroup paddingBottom="20" enabled="{model.selected_bbgame != null}" width="100%">
+				<s:VGroup>
+					<s:HGroup width="100%">
+						<s:Label  text="ゲームID:" width="56"/>
+						<s:Label id="bbgame_ID" text="{isNaN(model.selected_bbgame.bbgame_ID)?'New':model.selected_bbgame.bbgame_ID}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="ゲームは完了" width="150"/>
+						<s:CheckBox id="bbgame_complete" selected="{model.selected_bbgame.bbgame_complete == 1}"/>
+					</s:HGroup>
+					
+					<s:HGroup width="100%">
+						<s:Label text="ゲームの開始日と時間" width="150"/>
+						<georg:DateTimeField  id="bbgame_start_date" width="200" selectedDate="{timestampToDate(model.selected_bbgame.bbgame_start_date)}"/>
+					</s:HGroup>
+				</s:VGroup>
+				
+					<s:VGroup width="100%" height="100%" horizontalAlign="right">
+					<s:HGroup width="100%" horizontalAlign="center">
+						<s:Label text="ホームチーム" width="97"/>
+						<components:TeamDropDownList id="bbteam_ID_home" width="200" dataProvider="{BBTeamModel.getInstance().bbteams}" selectedItem="{getBBTeamFromModelByID(model.selected_bbgame.bbteam_ID_home)}"/>
+					</s:HGroup>
+					<s:HGroup width="100%" horizontalAlign="center">
+						<s:Label text="アウェイチーム" width="97"/>
+						<components:TeamDropDownList id="bbteam_ID_away" width="200" dataProvider="{BBTeamModel.getInstance().bbteams}" selectedItem="{getBBTeamFromModelByID(model.selected_bbgame.bbteam_ID_away)}"/>
+					</s:HGroup>
+						<s:HGroup width="100%" horizontalAlign="center">
+							
+							<s:Label text="スタジアム" width="97"/>
+							<components:StadiumDropDownList id="bbstadium_ID" width="200" dataProvider="{BBStadiumModel.getInstance().bbstadiums}" selectedItem="{getBBStadiumFromModelByID(model.selected_bbgame.bbstadium_ID)}"/>
+						</s:HGroup>
+					</s:VGroup>
+				
+			</s:HGroup>
+		</s:VGroup>
+		</s:VGroup>
+	</mx:VDividedBox>
+</s:Group>

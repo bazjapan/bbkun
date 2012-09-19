@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" creationComplete="cc()">
+	<s:layout>
+		<s:VerticalLayout verticalAlign="middle" horizontalAlign="center" />
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import app.popMessage;
+			
+			import com.pbsmediatech.json.utils.extractResult;
+			import com.pbsmediatech.json.utils.extractResultMessage;
+			import com.pbsmediatech.json.utils.extractResultResult;
+			import com.pbsmediatech.partner.dpegasus.DomainSettings;
+			import com.pbsmediatech.partner.dpegasus.dto.BBTeam;
+			import com.pbsmediatech.partner.dpegasus.json.controllers.BBTeamController;
+			import com.pbsmediatech.partner.dpegasus.json.utils.BBTeamResultHelper;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBTeamModel;
+			
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import utils.color.toColor;
+			import utils.color.toHTML;
+			import utils.color.toHexString;
+			
+			[Bindable]private var show_get:Boolean = false;
+			[Bindable]public var model:BBTeamModel = BBTeamModel.getInstance();
+			private var bbteamController:BBTeamController = new BBTeamController(DomainSettings.API_URL);
+			private var helper:BBTeamResultHelper = new BBTeamResultHelper();
+			
+			private function cc():void
+			{
+				get_bbteams_clickHandler();
+				this.addEventListener(KeyboardEvent.KEY_DOWN,onKeyDown);
+			}
+			
+			private function onKeyDown(event:KeyboardEvent):void
+			{
+				if(event.ctrlKey && event.shiftKey && event.keyCode == 83)
+				{
+					save_clickHandler();
+				}
+				if(event.ctrlKey && event.shiftKey && event.keyCode == 78)
+				{
+					add_bbteam_clickHandler();
+				}
+			}
+			protected function get_bbteams_clickHandler(event:MouseEvent = null):void
+			{
+				bbteamController.get_all_bbteams(function(evt:ResultEvent):void
+				{
+					var results:Array = helper.resultToArray(extractResult(evt));
+					model.bbteams.source = results;
+				});
+			}
+			protected function dg_bbteams_changeHandler(event:ListEvent):void
+			{
+				model.selected_bbteam = dg_bbteams.selectedItem as BBTeam;
+			}
+			protected function save_clickHandler(event:MouseEvent = null):void
+			{
+				//fill params from form here
+				if(model.selected_bbteam == null){return};
+				
+				model.selected_bbteam.bbteam_add = bbteam_add.text;
+				model.selected_bbteam.bbteam_short_name = bbteam_short_name.text;
+				model.selected_bbteam.bbteam_coach = bbteam_coach.text;
+				model.selected_bbteam.bbteam_fax = bbteam_fax.text;
+				model.selected_bbteam.bbteam_tel = bbteam_tel.text;
+				model.selected_bbteam.bbteam_company_name = bbteam_company_name.text;
+				model.selected_bbteam.bbteam_hp = bbteam_hp.text;
+				model.selected_bbteam.bbteam_logo = bbteam_logo.text;
+				model.selected_bbteam.bbteam_name_en = bbteam_name_en.text;
+				model.selected_bbteam.bbteam_name_ja = bbteam_name_ja.text;
+				model.selected_bbteam.bbteam_color = toHTML(bbteam_color.selectedColor);
+				//hack tohtml IS DISAPPEARING ANY ZEROS AT BEGINNING OF STRING
+				if(model.selected_bbteam.bbteam_color.length<7)
+				{
+					var split:String = model.selected_bbteam.bbteam_color.substr(1,4);
+					model.selected_bbteam.bbteam_color = "#00"+split;
+				}
+				
+				if(isNaN(model.selected_bbteam.bbteam_ID))
+				{
+					popMessage("Adding bbteam.");
+					bbteamController.add_bbteam(model.selected_bbteam,function(evt:ResultEvent):void
+					{
+						if(helper.resultIsGood(extractResult(evt)))
+						{
+							model.selected_bbteam.bbteam_ID = extractResultResult(evt) as Number;
+							model.bbteams.addItem(model.selected_bbteam);
+						}
+						else
+						{
+						}
+						popMessage(extractResultMessage(evt),500);
+					});
+				}
+				else
+					popMessage("Updating bbteam.");
+				bbteamController.update_bbteams_by_bbteam_ID(model.selected_bbteam,function(evt:ResultEvent):void
+				{
+					if(helper.resultIsGood(extractResult(evt)))
+					{
+					}
+					else
+					{
+					}
+					popMessage(extractResultMessage(evt),500);
+				});
+			}
+			
+			protected function add_bbteam_clickHandler(event:MouseEvent = null):void
+			{
+				model.selected_bbteam = new BBTeam();
+			}
+			protected function remove_bbteam_clickHandler(event:MouseEvent):void
+			{
+				if(model.selected_bbteam == null){return};
+				if(isNaN(model.selected_bbteam.bbteam_ID)){model.selected_bbteam = null};
+				Alert.show("Are you sure you wish to remove this item?", "Remove Item?", Alert.YES|Alert.NO, null, 
+					function(ce:CloseEvent):void{
+						if(ce.detail == Alert.YES)
+						{
+							popMessage("Removing bbteam");
+							bbteamController.remove_bbteams_by_bbteam_ID(model.selected_bbteam, function(evt:ResultEvent):void
+							{
+								popMessage(extractResultMessage(evt));
+								if(helper.resultIsGood(extractResult(evt)))
+								{
+									model.bbteams.removeItemAt(model.bbteams.getItemIndex(model.selected_bbteam));
+									model.selected_bbteam = null;
+								}
+							});
+						}
+					});
+			}
+		]]>
+	</fx:Script>
+	<mx:VDividedBox width="100%" height="100%">
+		<mx:DataGrid dataProvider="{model.bbteams}" width="100%" height="100%" id="dg_bbteams" change="dg_bbteams_changeHandler(event)">
+			<mx:columns>
+				<mx:DataGridColumn dataField="bbteam_ID"/>
+				<mx:DataGridColumn dataField="bbteam_short_name"/>
+				<mx:DataGridColumn dataField="bbteam_name_ja"/>
+				<mx:DataGridColumn dataField="bbteam_name_en"/>
+				<mx:DataGridColumn dataField="bbteam_hp"/>
+				<mx:DataGridColumn dataField="bbteam_logo"/>
+				<mx:DataGridColumn dataField="bbteam_company_name"/>
+				<mx:DataGridColumn dataField="bbteam_add"/>
+				<mx:DataGridColumn dataField="bbteam_tel"/>
+				<mx:DataGridColumn dataField="bbteam_fax"/>
+				<mx:DataGridColumn dataField="bbteam_coach"/>
+			</mx:columns>
+		</mx:DataGrid> 
+		<s:VGroup paddingLeft="20" paddingRight="20" width="100%" height="100%" >
+			<s:HGroup width="100%"  paddingBottom="20">
+				<s:HGroup width="100%" horizontalAlign="left">
+					<s:Button enabled="{model.selected_bbteam != null}" label="Remove" id="remove_bbteam" click="remove_bbteam_clickHandler(event)"/>
+					<s:Button includeInLayout="{show_get}" visible="{show_get}" label="Get" id="get_bbteams" click="get_bbteams_clickHandler(event)"/>
+					<s:Button label="Add" id="add_bbteam" click="add_bbteam_clickHandler(event)"/>
+				</s:HGroup>	
+				<s:HGroup  width="100%" horizontalAlign="right">
+					<s:Button enabled="{model.selected_bbteam != null}" label="Save" id="save" click="save_clickHandler(event)"/>
+				</s:HGroup>	
+			</s:HGroup>	
+			<s:HGroup enabled="{model.selected_bbteam != null}" width="100%">
+				<s:VGroup paddingRight="20">
+					<s:HGroup width="100%">
+						<s:Label  text="ID" width="150"/>
+						<s:Label id="bbteam_ID" text="{isNaN(model.selected_bbteam.bbteam_ID)?'New':model.selected_bbteam.bbteam_ID}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_name_ja" width="150"/>
+						<s:TextInput id="bbteam_name_ja" width="200" text="{model.selected_bbteam.bbteam_name_ja}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_name_en" width="150"/>
+						<s:TextInput id="bbteam_name_en" width="200" text="{model.selected_bbteam.bbteam_name_en}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_short_name" width="150"/>
+						<s:TextInput id="bbteam_short_name" width="100" maxChars="10" text="{model.selected_bbteam.bbteam_short_name}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_hp" width="150"/>
+						<s:TextInput id="bbteam_hp" width="200" text="{model.selected_bbteam.bbteam_hp}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_logo" width="150"/>
+						<s:TextInput id="bbteam_logo" width="200" text="{model.selected_bbteam.bbteam_logo}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_color" width="150"/>
+						<mx:ColorPicker id="bbteam_color" width="200" selectedColor="{toColor(model.selected_bbteam.bbteam_color)}"/>
+					</s:HGroup>
+				</s:VGroup>
+				<s:VGroup>
+				
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_company_name" width="150"/>
+						<s:TextInput id="bbteam_company_name" width="200" text="{model.selected_bbteam.bbteam_company_name}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_add" width="150"/>
+						<s:TextArea id="bbteam_add" width="200" text="{model.selected_bbteam.bbteam_add}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_tel" width="150"/>
+						<s:TextInput id="bbteam_tel" width="200" text="{model.selected_bbteam.bbteam_tel}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_fax" width="150"/>
+						<s:TextInput id="bbteam_fax" width="200" text="{model.selected_bbteam.bbteam_fax}"/>
+					</s:HGroup>
+					<s:HGroup width="100%">
+						<s:Label text="bbteam_coach" width="150"/>
+						<s:TextInput id="bbteam_coach" width="200" text="{model.selected_bbteam.bbteam_coach}"/>
+					</s:HGroup>
+				</s:VGroup>
+			</s:HGroup>
+		</s:VGroup>
+	</mx:VDividedBox>
+</s:Group>

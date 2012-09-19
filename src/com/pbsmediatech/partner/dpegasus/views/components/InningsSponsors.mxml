@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="400" height="300">
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGameSponsor;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			
+			import spark.components.PopUpAnchor;
+			
+			[Bindable]public var sponsors:ArrayCollection;
+			public var addPop:AddGameSponsorPop;
+			protected function add_clickHandler(event:MouseEvent):void
+			{
+				PopUpManager.removePopUp(addPop);
+				addPop = new AddGameSponsorPop;
+				addPop.okFunc = function(spon:BBGameSponsor){
+					spon.type = BBGameSponsor.SPONSOR_TYPE_INNINGS;
+					sponsors.addItem(spon); closeMe()};
+				addPop.addEventListener(CloseEvent.CLOSE, closeMe);
+				PopUpManager.addPopUp(addPop, this);
+				function closeMe(ce:CloseEvent = null){
+					 PopUpManager.removePopUp(addPop);
+					 addPop = null;
+				 }
+				
+			}
+			
+			protected function remove_clickHandler(event:MouseEvent):void
+			{
+				if(lt_sponsors.selectedItem)
+				{
+					sponsors.removeItemAt(lt_sponsors.selectedIndex);
+				}
+				
+			}
+			
+			protected function move_up_clickHandler(event:MouseEvent):void
+			{
+				var current_index:int = lt_sponsors.selectedIndex;
+				var max_index:int = 0;
+				if(current_index > max_index)
+				{
+					sponsors.setItemAt(lt_sponsors.selectedIndices, current_index++);
+				}
+				
+			}
+			
+			protected function move_down_clickHandler(event:MouseEvent):void
+			{
+				var current_index:int = lt_sponsors.selectedIndex;
+				var max_index:int = sponsors.length;
+				if(current_index < max_index)
+				{
+					sponsors.setItemAt(lt_sponsors.selectedIndices, current_index++);
+				}
+				
+			}
+			public function save():Array
+			{
+				//return an array of sponsors 
+				//set order according to list index +1
+				return [];
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<s:HGroup width="100%">
+		<s:Button id="add" label="+" click="add_clickHandler(event)"/>
+		<s:Button id="remove" label="-" enabled="{lt_sponsors.selectedItem != null}" click="remove_clickHandler(event)"/>
+		<s:HGroup height="100%" width="100%" horizontalAlign="center" verticalAlign="middle">
+			<s:Label text="Innings Sponsors"/>
+		</s:HGroup>
+		<s:Button id="move_up" label="上" enabled="{lt_sponsors.selectedItem != null}" click="move_up_clickHandler(event)"/>
+		<s:Button id="move_down" label="下" enabled="{lt_sponsors.selectedItem != null}" click="move_down_clickHandler(event)"/>
+		
+		
+	</s:HGroup>
+	<s:List id="lt_sponsors" width="100%" height="100%" dataProvider="{sponsors}">
+		
+	</s:List>
+</s:Group>

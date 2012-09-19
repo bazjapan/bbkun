@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"  width="930" height="1000"  xmlns:views="com.pbsmediatech.partner.dpegasus.views.*" creationComplete="application1_creationCompleteHandler(event)">
+	<s:states>
+		<s:State name="game_admin"/>
+		<s:State name="game_on"/>
+	</s:states>
+	<fx:Script>
+		<![CDATA[
+			import com.adobe.serialization.json.JSON;
+			import com.pbsmediatech.json.utils.extractResult;
+			import com.pbsmediatech.partner.dpegasus.DomainSettings;
+			import com.pbsmediatech.partner.dpegasus.dto.BBGame;
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGamePlayer;
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGameResultDetails;
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGameSponsor;
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBInnings;
+			import com.pbsmediatech.partner.dpegasus.json.controllers.BBStadiumController;
+			import com.pbsmediatech.partner.dpegasus.json.controllers.BBTeamController;
+			import com.pbsmediatech.partner.dpegasus.json.utils.BBStadiumResultHelper;
+			import com.pbsmediatech.partner.dpegasus.json.utils.BBTeamResultHelper;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameModel;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameOnModel;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBStadiumModel;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBTeamModel;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import utils.isInitializedString;
+			
+			private var save_time:int = 90000;
+			private var save_remaining_time:int = 0;
+			private var save_timer:Timer = new Timer(save_time,1);
+			private var save_remaining_timer:Timer = new Timer(1000);
+
+			private var team_controller:BBTeamController = new BBTeamController(DomainSettings.API_URL);
+			
+			protected function application1_creationCompleteHandler(event:FlexEvent):void
+			{
+				new BBStadiumController(DomainSettings.API_URL).get_all_bbstadiums(function(evt:ResultEvent):void
+				{
+					var results:Array = new BBStadiumResultHelper().resultToArray(extractResult(evt));
+					BBStadiumModel.getInstance().bbstadiums = new ArrayCollection(results);
+				});
+				new BBTeamController(DomainSettings.API_URL).get_all_bbteams(function(evt:ResultEvent):void
+				{
+					var results:Array= new BBTeamResultHelper().resultToArray(extractResult(evt));
+					BBTeamModel.getInstance().bbteams = new ArrayCollection(results);
+				});
+				
+				
+				//listeners:
+				
+				gameAdmin.addEventListener("EVENT_GO_TO_GAME_ON", onEVENT_GO_TO_GAME_ON);
+				
+				
+				save_timer.addEventListener(TimerEvent.TIMER_COMPLETE,onSaveTimerComplete);
+				save_remaining_timer.addEventListener(TimerEvent.TIMER,onSaveRemainingTimer);
+				
+			}
+
+			
+
+			
+			private function onEVENT_GO_TO_GAME_ADMIN(event:Event):void
+			{
+				this.currentState = "game_admin";
+				save_timer.stop();
+				save_remaining_timer.stop();
+			}
+
+			private function onEVENT_GO_TO_GAME_ON(event:Event):void
+			{
+				prepareGame(BBGameModel.getInstance().selected_bbgame);
+				this.currentState = "game_on";
+				gameOn.addEventListener("EVENT_GO_TO_GAME_ADMIN", onEVENT_GO_TO_GAME_ADMIN);
+				gameOn.addEventListener("AUTO_SAVE_CHANGE",onAUTO_SAVE_CHANGE);
+				
+			}
+
+			private function onAUTO_SAVE_CHANGE(event:Event):void
+			{
+				if(gameOn.auto_save == false)
+				{
+					doEndGameTimer();
+					gameOn.remainingTimeTillNextSave = 0;
+				}
+				else
+				{
+					doStartGameTimer();
+				}
+			}
+
+			private function onGAME_SAVED(event:Event):void
+			{
+				save_timer.reset();
+				save_timer.start();
+				save_remaining_time = save_time;
+			}
+			private function onSaveRemainingTimer(event:TimerEvent):void
+			{
+				save_remaining_time=(save_remaining_time-1000)
+				gameOn.remainingTimeTillNextSave = save_remaining_time/1000; 
+			}
+			
+
+			private function onSaveTimerComplete(event:TimerEvent):void
+			{
+				gameOn.save();
+				save_timer.reset();
+				save_timer.start();
+				save_remaining_time = save_time;
+			}
+			
+			
+			private function prepareGame(bbgame:BBGame):void
+			{
+			
+				//is this the firs time or are we editing?
+				//prepare new game
+				var gameOnModel:BBGameOnModel = BBGameOnModel.getInstance();
+				gameOnModel.bbgame_in_play = bbgame;
+				//get teams;
+				team_controller.get_bbteams_by_bbteam_ID({bbteam_ID:bbgame.bbteam_ID_home}, function(evt:ResultEvent):void
+				{
+					gameOnModel.bbteam_home = new BBTeamResultHelper().resultToSingle_BBTeam(extractResult(evt));
+					if(isInitializedString(gameOnModel.bbgame_in_play.bbteam_home))
+					{
+						gameOnModel.bbgame_in_play.bbteam_home = gameOnModel.bbteam_home.bbteam_name_ja;
+					};
+				});
+				team_controller.get_bbteams_by_bbteam_ID({bbteam_ID:bbgame.bbteam_ID_away}, function(evt:ResultEvent):void
+				{
+					gameOnModel.bbteam_away = new BBTeamResultHelper().resultToSingle_BBTeam(extractResult(evt));
+					if(isInitializedString(gameOnModel.bbgame_in_play.bbteam_away))
+					{
+						gameOnModel.bbgame_in_play.bbteam_away = gameOnModel.bbteam_away.bbteam_name_ja;
+					};
+				});
+				
+				//prepare innings 
+				gameOnModel.innings.removeAll();
+				var innings:Array = JSON.decode(gameOnModel.bbgame_in_play.bbgame_innings);
+				for each(var obj:Object in innings)
+				{
+					gameOnModel.innings.addItem(new BBInnings(obj));
+					
+				}
+				if(gameOnModel.innings.length>0)
+				{
+				 gameOnModel.selected_innings = gameOnModel.innings.getItemAt(0) as BBInnings;
+				}
+				 
+				//prepare players
+				 gameOnModel.bbgame_lineup_home.removeAll();
+				 gameOnModel.bbgame_lineup_away.removeAll();
+				 var home_players:Array = JSON.decode(gameOnModel.bbgame_in_play.bbgame_lineup_home);
+				 var away_players:Array = JSON.decode(gameOnModel.bbgame_in_play.bbgame_lineup_away);
+				 
+				 for each(var hp:Object in home_players)
+				 {
+					 gameOnModel.bbgame_lineup_home.addItem(new BBGamePlayer(hp));
+					 
+				 }
+				 for each(var ap:Object in away_players)
+				 {
+					 gameOnModel.bbgame_lineup_away.addItem(new BBGamePlayer(ap));
+					 
+				 }
+				 
+				 //prepare sponsors
+				 gameOnModel.bbgame_sponsors.removeAll();
+				 gameOnModel.innings_sponsors.removeAll();
+				 var game_sponsors:Array = JSON.decode(gameOnModel.bbgame_in_play.bbgame_sponsors);
+				 var innings_sponsors:Array = JSON.decode(gameOnModel.bbgame_in_play.bbgame_innings_sponsors);
+				 
+				 for each(var gs:Object in game_sponsors)
+				 {
+					 gameOnModel.bbgame_sponsors.addItem(new BBGameSponsor(gs));
+					 
+				 }
+				 for each(var ins:Object in innings_sponsors)
+				 {
+					 gameOnModel.innings_sponsors.addItem(new BBGameSponsor(ins));
+					 
+				 }
+				gameOnModel.bbgameResults = new BBGameResultDetails(JSON.decode(gameOnModel.bbgame_in_play.bbgame_results));
+			
+			
+			
+			}
+			
+			public function doStartGameTimer():void
+			{
+				
+				save_timer.start();
+				save_remaining_timer.start();
+				save_remaining_time = save_time;
+				gameOn.addEventListener("GAME_SAVED",onGAME_SAVED);
+			}
+			public function doEndGameTimer():void
+			{
+				save_timer.stop();
+				save_timer.reset();
+				save_remaining_timer.stop();
+				save_remaining_timer.reset();
+				save_remaining_time = 0;
+				gameOn.removeEventListener("GAME_SAVED",onGAME_SAVED);
+			}
+
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<s:BorderContainer width="100%" height="100%">
+		
+	<views:GameAdmin id="gameAdmin" includeIn="game_admin" width="100%" height="100%">
+		
+	</views:GameAdmin>
+	<views:GameOn id="gameOn" includeIn="game_on" width="100%" height="100%">
+		
+	</views:GameOn>
+	</s:BorderContainer>
+</s:Application>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+	<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
+				xmlns:s="library://ns.adobe.com/flex/spark"
+				xmlns:mx="library://ns.adobe.com/flex/mx"
+				width="100%" height="24"  autoDrawBackground="true" creationComplete="cc(event)">
+	<fx:Script>
+		<![CDATA[
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGamePlayer;
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameOnModel;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			
+			import spark.events.IndexChangeEvent;
+			import spark.events.TextOperationEvent;
+			
+		
+			
+			[Bindable]private var player:BBGamePlayer;
+			
+			
+			
+			override public function set data(value:Object):void
+			{
+				super.data = value;
+				if(value != null)
+				{
+					player = value as BBGamePlayer;
+				}
+			}
+			
+			
+			protected function player_position_changeHandler(event:IndexChangeEvent = null):void
+			{
+				player.position = player_position.selectedItem as String;		
+				
+			}
+			
+			protected function player_number_changeHandler(event:Event):void
+			{
+				player.pl_num = player_number.text;
+				
+			}
+			
+			
+			
+			protected function cc(event:FlexEvent):void
+			{
+				
+
+			}
+			
+			
+			
+			
+			protected function player_name_enterHandler(event:FlexEvent):void
+			{
+				player.fam_name = player_name.text;
+				trace("enter "+player.fam_name);
+				
+			}
+			
+			protected function player_name_changeHandler(event:Event):void
+			{
+				player.fam_name = player_name.text;
+				trace(player.fam_name)
+			}
+			
+			protected function player_name_focusOutHandler(event:FocusEvent):void
+			{
+				player.fam_name = player_name.text;
+				trace(player.fam_name)
+				
+			}
+			
+		]]>
+	</fx:Script>
+<s:HGroup gap="0" width="100%" height="100%"  verticalAlign="middle">
+	<s:DropDownList  id="player_position" selectedItem="{player.position}" change="player_position_changeHandler(event)" width="100%" dataProvider="{BBGameOnModel.getInstance().baseball_positions}"
+					requireSelection="true"/>
+	<mx:TextInput id="player_name" width="100%" imeMode="JAPANESE_HIRAGANA" focusOut="player_name_focusOutHandler(event)" change="player_name_changeHandler(event)" maxChars="10"
+				 text="{player.fam_name}" textAlign="center"/> 
+	<mx:TextInput id="player_number" width="30" change="player_number_changeHandler(event)"
+				 maxChars="3" text="{player.pl_num}"/> 
+</s:HGroup>	
+	
+</s:ItemRenderer>

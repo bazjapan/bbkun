@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
+				xmlns:s="library://ns.adobe.com/flex/spark"
+				xmlns:mx="library://ns.adobe.com/flex/mx"
+				width="40" autoDrawBackground="true"
+				contentBackgroundColor.selected="#DDDDDD">
+	<s:states>
+		<s:State name="normal"/>
+		<s:State name="selected"/>
+	</s:states>
+	<fx:Script>
+		<![CDATA[
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBInnings;
+			
+			import spark.events.TextOperationEvent;
+		
+			
+			[Bindable]public var innings:BBInnings;
+			
+			override public function set data(value:Object):void
+			{
+				super.data = value;
+				innings = value as BBInnings;
+			}
+
+		
+			
+
+	
+
+			protected function ns_hs_changeHandler(event:Event):void
+			{
+				innings.runs_home = ns_hs.value as int;
+				dispatchEvent(new Event("EVENT_INNINGS_SCORE_CHANGED", true));
+			}
+
+
+			protected function ns_as_changeHandler(event:Event):void
+			{
+				innings.runs_away = ns_as.value as int;
+				dispatchEvent(new Event("EVENT_INNINGS_SCORE_CHANGED", true));
+			}
+
+
+			protected function btn_innings_clickHandler(event:MouseEvent):void
+			{
+				dispatchEvent(new Event("EVENT_CURRENT_INNINGS_CHANGED",true));
+			}
+
+		]]>
+	</fx:Script>
+	
+	
+	<s:VGroup >
+		<s:VGroup verticalAlign="middle" height="40" width="40" horizontalAlign="center">
+			<s:Button width="38" label="{innings.innings_num}" id="btn_innings" click="btn_innings_clickHandler(event)"/>
+		</s:VGroup>
+		<s:VGroup verticalAlign="middle"  horizontalAlign="center"  height="40" width="40">
+			<s:NumericStepper maximum="99" minimum="0" id="ns_as" value="{innings.runs_away}" change="ns_as_changeHandler(event)" width="100%">
+				
+			</s:NumericStepper>
+		
+		</s:VGroup>
+		<s:VGroup verticalAlign="middle" horizontalAlign="center" height="40" width="40">
+		<s:NumericStepper maximum="99" minimum="0"  id="ns_hs" value="{innings.runs_home}" change="ns_hs_changeHandler(event)" width="100%">
+			
+		</s:NumericStepper>
+			
+		</s:VGroup>
+	</s:VGroup>
+	<!--score end-->
+</s:ItemRenderer>

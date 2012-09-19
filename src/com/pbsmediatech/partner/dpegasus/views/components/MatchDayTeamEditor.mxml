@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="200" height="100%" creationComplete="cc(event)">
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.pbsmediatech.partner.dpegasus.views.models.BBGameOnModel;
+			
+			import utils.color.toColor;
+			
+			
+			
+			protected function remove_player_clickHandler(event:MouseEvent):void
+			{
+				if(lt_players.selectedItem)
+				{
+					players.removeItemAt(lt_players.selectedIndex);
+				}
+				
+			}
+			
+			protected function add_player_clickHandler(event:MouseEvent):void
+			{
+				var player:BBGamePlayer = new BBGamePlayer();
+				player.fam_name = "名前";
+				player.pl_num = "0";
+				player.position=BBGameOnModel.getInstance().baseball_positions.getItemAt(0).toString();
+				players.addItem(player);
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.pbsmediatech.partner.dpegasus.dto.BBTeam;
+			import com.pbsmediatech.partner.dpegasus.dto.nested.BBGamePlayer;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			
+			[Bindable]public var players:ArrayCollection;
+			[Bindable]public var bbteam:BBTeam;
+			
+			protected function cc(event:FlexEvent):void
+			{
+				trace("players "+players.length)
+			}
+			
+			
+			
+		]]>
+	</fx:Script>
+	
+	<s:VGroup width="100%" height="100%" verticalAlign="middle" horizontalAlign="center">
+		<s:BorderContainer height="30" width="100%" backgroundColor="{toColor(bbteam.bbteam_color)}">
+			<s:layout>
+				<s:HorizontalLayout verticalAlign="middle" horizontalAlign="center"/>
+			</s:layout>
+		<s:Label width="100%" color="#FFFFFF" fontSize="14" fontWeight="bold"
+				 text="{bbteam.bbteam_short_name}" textAlign="center"/>
+		</s:BorderContainer>
+		<s:HGroup width="100%">
+			<s:Label width="60" text="ポジション" textAlign="center"/>
+			<s:Label width="70" text="名前" textAlign="center"/> 
+			<s:Label width="50" text="#" textAlign="center" toolTip="Player Number"/> 
+		</s:HGroup>	
+	<!--	<s:HGroup width="100%" horizontalAlign="right">
+			<s:Button id="remove_dh" visible="{players.length &gt; 9}" width="50"  height="16" label="-DH"
+					  click="remove_dh_clickHandler(event)"/>
+			<s:Button id="add_dh" visible="{players.length &lt; 10}" width="50" height="16"
+					  label="+DH" click="add_dh_clickHandler(event)"/>
+		</s:HGroup>-->
+	<s:List horizontalScrollPolicy="off" id="lt_players" dataProvider="{players}" width="100%" height="100%" itemRenderer="com.pbsmediatech.partner.dpegasus.views.components.renderers.MatchDayTeamMemberRenderer">
+		
+	</s:List>	
+		<s:HGroup width="100%">
+			<s:HGroup horizontalAlign="left" width="100%" paddingLeft="5">
+				<s:Button enabled="{lt_players.selectedItem != null}" label="-" id="remove_player" width="35" click="remove_player_clickHandler(event)"/>
+			</s:HGroup>
+			<s:HGroup horizontalAlign="right" width="100%" paddingRight="5">
+				<s:Button label="+" id="add_player" width="35"  click="add_player_clickHandler(event)"/>
+			</s:HGroup>
+		</s:HGroup>
+	</s:VGroup>
+</s:Group>
